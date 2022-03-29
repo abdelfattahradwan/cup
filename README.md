@@ -27,7 +27,7 @@ Create Unity Package (cup) is a command-line app that allows you to create Unity
 
 ## Ignoring Files/Folders
 
-You can ignore certains files/folders by creating a `.cupignore` file at the *root directory path* that you specify. The `.cupignore` should contain a single `JSON` array like to following example:
+You can ignore certains files/folders by creating a `.cupignore` file at the *root directory path* that you specify. The `.cupignore` must contain only a single `JSON` array like to following example:
 
 ```json
 [
@@ -36,6 +36,8 @@ You can ignore certains files/folders by creating a `.cupignore` file at the *ro
   "Scripts/Private/MyScript.cs"
 ]
 ```
+
+If the file contains anything else, an exception is thrown.
 
 ## Downloads
 
