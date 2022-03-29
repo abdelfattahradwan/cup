@@ -5,6 +5,8 @@ namespace CreateUnityPackage;
 
 internal static class Program
 {
+	private const string IgnoreFileName = ".cupignore";
+
 	public static async Task Main(string[] args)
 	{
 		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(Execute);
@@ -14,9 +16,7 @@ internal static class Program
 	{
 		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
 
-		Console.WriteLine(Environment.CurrentDirectory);
-
-		if (File.Exists(".cupignore") && JsonSerializer.Deserialize<IEnumerable<string>>(await File.ReadAllTextAsync(".cupignore")) is not null and IEnumerable<string> ignorePaths)
+		if (File.Exists(IgnoreFileName) && JsonSerializer.Deserialize<IEnumerable<string>>(await File.ReadAllTextAsync(IgnoreFileName)) is not null and IEnumerable<string> ignorePaths)
 		{
 			options.IgnoredPaths = options.IgnoredPaths.Concat(ignorePaths);
 		}
