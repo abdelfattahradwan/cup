@@ -1,3 +1,3 @@
 ﻿namespace CreateUnityPackage;
 
-internal record Asset(string FilePath, string MetaFilePath, string Guid);
+internal record struct Asset(string FilePath, string MetaFilePath, string Guid);
