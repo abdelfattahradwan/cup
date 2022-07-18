@@ -13,8 +13,6 @@ Create Unity Package (cup) is a command-line app that allows you to create Unity
 
 `-s, --src    (Required) Root directory path.`
 
-`-t, --tmp    (Optional) Temporary working directory path.`
-
 `-o, --out    (Required) Output package file path.`
 
 `-c, --cpr    (Optional) Level of compression. (0 = Optimal, 1 = Fastest, 2 = None, 3 = Smallest)`

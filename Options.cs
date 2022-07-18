@@ -7,9 +7,6 @@ internal sealed class Options
 	[Option('s', "src", Required = true, HelpText = "Root directory path.")]
 	public string SourceDirectoryPath { get; set; } = string.Empty;
 
-	[Option('t', "tmp", Required = false, HelpText = "Temporary working directory path.")]
-	public string TemporaryDirectoryPath { get; set; } = Path.GetTempPath();
-
 	[Option('o', "out", Required = true, HelpText = "Output package file path.")]
 	public string OutputFilePath { get; set; } = string.Empty;
 

@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace CreateUnityPackage;
@@ -9,16 +10,44 @@ internal static class Program
 
 	public static async Task Main(string[] args)
 	{
-		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(Execute);
+		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
 	}
 
-	private static async Task Execute(Options options)
+	private static async Task HandleParsedAsync(Options options)
 	{
 		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
 
-		if (File.Exists(IgnoreFileName) && JsonSerializer.Deserialize<IEnumerable<string>>(await File.ReadAllTextAsync(IgnoreFileName)) is not null and IEnumerable<string> ignorePaths)
+		if (File.Exists(IgnoreFileName))
 		{
-			options.IgnoredPaths = options.IgnoredPaths.Concat(ignorePaths);
+			try
+			{
+				if (JsonSerializer.Deserialize<IEnumerable<string>>(await File.ReadAllTextAsync(IgnoreFileName)) is { } extraIgnoredPaths) options.IgnoredPaths = options.IgnoredPaths.Concat(extraIgnoredPaths);
+			}
+			catch (Exception exception)
+			{
+				Console.ForegroundColor = ConsoleColor.Yellow;
+
+				Console.WriteLine($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
+
+				Console.ForegroundColor = ConsoleColor.Red;
+
+				Console.WriteLine(exception.ToString());
+
+				Console.ResetColor();
+
+				Console.WriteLine("Do you want to continue? (y/n)");
+
+				if (string.Equals(Console.ReadLine(), "y", StringComparison.OrdinalIgnoreCase))
+				{
+					Console.WriteLine("Continuing...");
+				}
+				else
+				{
+					Console.WriteLine("Exiting...");
+
+					return;
+				}
+			}
 		}
 
 		await PackageCreator.CreatePackageFromDirectory(options);

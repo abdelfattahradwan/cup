@@ -12,9 +12,9 @@ internal static class PackageCreator
 		ReturnSpecialDirectories = false,
 	};
 
-	private static readonly Regex MetaGuidRegex = new(@"guid:\s*(?<guid>\S+)");
+	private static readonly Regex MetaGuidRegex = new(@"guid:\s*(?<guid>\S+)", RegexOptions.Compiled);
 
-	private static readonly Regex AssetsSubdirectoryRegex = new(@"Assets(\\|\/)(.*)");
+	private static readonly Regex AssetsSubdirectoryRegex = new(@"Assets(\\|\/)(.*)", RegexOptions.Compiled);
 
 	private static async Task<Asset?> FindAsset(string filePath)
 	{
@@ -22,31 +22,21 @@ internal static class PackageCreator
 
 		if (!File.Exists(metaFilePath)) return null;
 
-		string guid = string.Empty;
+		using StreamReader reader = File.OpenText(metaFilePath);
 
-		using (StreamReader reader = File.OpenText(metaFilePath))
+		while (await reader.ReadLineAsync() is { } line && !string.IsNullOrWhiteSpace(line))
 		{
-			string? line;
+			if (MetaGuidRegex.Match(line) is not { Success: true } match) continue;
 
-			while (!string.IsNullOrWhiteSpace(line = await reader.ReadLineAsync()))
-			{
-				Match match = MetaGuidRegex.Match(line);
+			string guid = match.Groups["guid"].Value;
 
-				if (match.Success)
-				{
-					guid = match.Groups["guid"].Value;
-
-					break;
-				}
-			}
+			return string.IsNullOrWhiteSpace(guid) ? null : new Asset(filePath, metaFilePath, guid);
 		}
 
-		if (string.IsNullOrWhiteSpace(guid)) return null;
-
-		return new Asset(filePath, metaFilePath, guid);
+		return null;
 	}
 
-	private static async Task<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, HashSet<string> ignoredPaths)
+	private static async Task<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
 	{
 		ImmutableArray<Asset>.Builder assets = ImmutableArray.CreateBuilder<Asset>();
 
@@ -60,10 +50,7 @@ internal static class PackageCreator
 			}
 			else if (File.Exists(path))
 			{
-				if (await FindAsset(path) is not null and Asset asset)
-				{
-					assets.Add(asset);
-				}
+				if (await FindAsset(path) is { } asset) assets.Add(asset);
 			}
 			else
 			{
@@ -97,23 +84,13 @@ internal static class PackageCreator
 				await File.WriteAllTextAsync(Path.Combine(assetDirectory.FullName, "pathname"), AssetsSubdirectoryRegex.Match(asset.FilePath).Value);
 			}
 
-			if (File.Exists(options.OutputFilePath))
-			{
-				File.Delete(options.OutputFilePath);
-			}
+			if (File.Exists(options.OutputFilePath)) File.Delete(options.OutputFilePath);
 
 			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
 		}
-		catch
-		{
-			throw;
-		}
 		finally
 		{
-			if (Directory.Exists(temporaryDirectoryPath))
-			{
-				Directory.Delete(temporaryDirectoryPath, true);
-			}
+			if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
 		}
 	}
 }
