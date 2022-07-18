@@ -67,7 +67,16 @@ internal static class PackageCreator
 
 		ImmutableArray<Asset> assets = await FindAssets(Environment.CurrentDirectory, ignoredPaths);
 
-		if (assets.Length == 0) return;
+		if (assets.Length == 0)
+		{
+			Console.ForegroundColor = ConsoleColor.Red;
+			
+			Console.WriteLine("No assets found. Exiting...");
+			
+			Console.ResetColor();
+			
+			return;
+		}
 
 		string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), $"cup-{Guid.NewGuid():N}");
 
@@ -84,9 +93,34 @@ internal static class PackageCreator
 				await File.WriteAllTextAsync(Path.Combine(assetDirectory.FullName, "pathname"), AssetsSubdirectoryRegex.Match(asset.FilePath).Value);
 			}
 
-			if (File.Exists(options.OutputFilePath)) File.Delete(options.OutputFilePath);
+			if (File.Exists(options.OutputFilePath))
+			{
+				Console.ForegroundColor = ConsoleColor.Yellow;
+				
+				Console.WriteLine($"Deleting existing file: '{options.OutputFilePath}'.");
+				
+				Console.ResetColor();
+				
+				File.Delete(options.OutputFilePath);
+			}
 
 			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
+
+			Console.ForegroundColor = ConsoleColor.Green;
+			
+			Console.WriteLine($"Package created: '{options.OutputFilePath}'.");
+			
+			Console.ResetColor();
+		}
+		catch (Exception exception)
+		{
+			Console.ForegroundColor = ConsoleColor.Red;
+			
+			Console.WriteLine("Failed to create package.");
+			
+			Console.WriteLine(exception.ToString());
+			
+			Console.ResetColor();
 		}
 		finally
 		{

@@ -1,5 +1,4 @@
 ﻿using CommandLine;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace CreateUnityPackage;
@@ -12,7 +11,7 @@ internal static class Program
 	{
 		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
 	}
-
+	
 	private static async Task HandleParsedAsync(Options options)
 	{
 		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
@@ -25,11 +24,9 @@ internal static class Program
 			}
 			catch (Exception exception)
 			{
-				Console.ForegroundColor = ConsoleColor.Yellow;
+				Console.ForegroundColor = ConsoleColor.Red;
 
 				Console.WriteLine($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
-
-				Console.ForegroundColor = ConsoleColor.Red;
 
 				Console.WriteLine(exception.ToString());
 
