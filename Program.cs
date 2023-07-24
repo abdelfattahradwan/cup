@@ -11,7 +11,7 @@ internal static class Program
 	{
 		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
 	}
-	
+
 	private static async Task HandleParsedAsync(Options options)
 	{
 		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);

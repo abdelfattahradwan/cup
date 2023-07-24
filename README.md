@@ -1,6 +1,7 @@
 # Create Unity Package (cup)
 
-Create Unity Package (cup) is a command-line app that allows you to create Unity packages from the command line without installing Unity.
+Create Unity Package (cup) is a command-line app that allows you to create Unity packages from the command line without
+installing Unity.
 
 ## Features
 
@@ -25,7 +26,8 @@ Create Unity Package (cup) is a command-line app that allows you to create Unity
 
 ## Ignoring Files/Folders
 
-You can ignore certains files/folders by creating a `.cupignore` file at the *root directory path* that you specify. The `.cupignore` must contain only a single `JSON` array like to following example:
+You can ignore certains files/folders by creating a `.cupignore` file at the *root directory path* that you specify.
+The `.cupignore` must contain only a single `JSON` array like to following example:
 
 ```json
 [

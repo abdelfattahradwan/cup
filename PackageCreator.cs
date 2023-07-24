@@ -9,6 +9,7 @@ internal static class PackageCreator
 	private static readonly EnumerationOptions FileSystemEnumerationOptions = new()
 	{
 		RecurseSubdirectories = false,
+		
 		ReturnSpecialDirectories = false,
 	};
 
@@ -16,7 +17,7 @@ internal static class PackageCreator
 
 	private static readonly Regex AssetsSubdirectoryRegex = new(@"Assets(\\|\/)(.*)", RegexOptions.Compiled);
 
-	private static async Task<Asset?> FindAsset(string filePath)
+	private static async ValueTask<Asset?> FindAsset(string filePath)
 	{
 		string metaFilePath = $"{filePath}.meta";
 
@@ -36,7 +37,7 @@ internal static class PackageCreator
 		return null;
 	}
 
-	private static async Task<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
+	private static async ValueTask<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
 	{
 		ImmutableArray<Asset>.Builder assets = ImmutableArray.CreateBuilder<Asset>();
 
@@ -54,27 +55,27 @@ internal static class PackageCreator
 			}
 			else
 			{
-				throw new Exception($"Unable to deduce the path type. {nameof(path)}: '{path}'");
+				throw new PathTypeDeductionException(path);
 			}
 		}
 
 		return assets.ToImmutable();
 	}
 
-	public static async Task CreatePackageFromDirectory(Options options)
+	public static async ValueTask CreatePackageFromDirectory(Options options)
 	{
-		HashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToHashSet();
+		ImmutableHashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToImmutableHashSet();
 
 		ImmutableArray<Asset> assets = await FindAssets(Environment.CurrentDirectory, ignoredPaths);
 
 		if (assets.Length == 0)
 		{
 			Console.ForegroundColor = ConsoleColor.Red;
-			
+
 			Console.WriteLine("No assets found. Exiting...");
-			
+
 			Console.ResetColor();
-			
+
 			return;
 		}
 
@@ -96,30 +97,30 @@ internal static class PackageCreator
 			if (File.Exists(options.OutputFilePath))
 			{
 				Console.ForegroundColor = ConsoleColor.Yellow;
-				
+
 				Console.WriteLine($"Deleting existing file: '{options.OutputFilePath}'.");
-				
+
 				Console.ResetColor();
-				
+
 				File.Delete(options.OutputFilePath);
 			}
 
 			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
 
 			Console.ForegroundColor = ConsoleColor.Green;
-			
+
 			Console.WriteLine($"Package created: '{options.OutputFilePath}'.");
-			
+
 			Console.ResetColor();
 		}
 		catch (Exception exception)
 		{
 			Console.ForegroundColor = ConsoleColor.Red;
-			
+
 			Console.WriteLine("Failed to create package.");
-			
+
 			Console.WriteLine(exception.ToString());
-			
+
 			Console.ResetColor();
 		}
 		finally
