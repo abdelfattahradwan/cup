@@ -28,7 +28,7 @@ internal static class Program
 
 				Console.WriteLine($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
 
-				Console.WriteLine(exception.ToString());
+				Console.WriteLine(exception);
 
 				Console.ResetColor();
 
