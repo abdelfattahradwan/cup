@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace CreateUnityPackage;
 
-internal static class PackageCreator
+internal static partial class PackageCreator
 {
 	private static readonly EnumerationOptions FileSystemEnumerationOptions = new()
 	{
@@ -13,10 +13,16 @@ internal static class PackageCreator
 		ReturnSpecialDirectories = false,
 	};
 
-	private static readonly Regex MetaGuidRegex = new(@"guid:\s*(?<guid>\S+)", RegexOptions.Compiled);
+	private static readonly Regex MetaGuidRegex = GetGeneratedMetaGuidRegex();
 
-	private static readonly Regex AssetsSubdirectoryRegex = new(@"Assets(\\|\/)(.*)", RegexOptions.Compiled);
+	private static readonly Regex AssetsSubdirectoryRegex = GetGeneratedAssetsSubdirectoryRegex();
 
+	[GeneratedRegex("guid:\\s*(?<guid>\\S+)", RegexOptions.Compiled)]
+	private static partial Regex GetGeneratedMetaGuidRegex();
+	
+	[GeneratedRegex("Assets(\\\\|\\/)(.*)", RegexOptions.Compiled)]
+	private static partial Regex GetGeneratedAssetsSubdirectoryRegex();
+	
 	private static async ValueTask<Asset?> FindAsset(string filePath)
 	{
 		string metaFilePath = $"{filePath}.meta";
