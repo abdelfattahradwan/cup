@@ -1,22 +1,19 @@
-﻿using System.Collections.Immutable;
+﻿using Microsoft.Extensions.FileSystemGlobbing;
 using System.IO.Compression;
 
 namespace CreateUnityPackage;
 
 internal static class PackageCreator
 {
-    private static readonly EnumerationOptions FileSystemEnumerationOptions = new()
+    private static async Task<Asset?> GetAssetAsync(string metaFilePath)
     {
-        RecurseSubdirectories = false,
+        string? metaFileDirectoryPath = Path.GetDirectoryName(metaFilePath);
 
-        ReturnSpecialDirectories = false,
-    };
+        ArgumentException.ThrowIfNullOrWhiteSpace(metaFileDirectoryPath);
 
-    private static async Task<Asset?> GetAssetAsync(string filePath)
-    {
-        string metaFilePath = $"{filePath}.meta";
+        string filePath = Path.Combine(metaFileDirectoryPath, Path.GetFileNameWithoutExtension(metaFilePath));
 
-        if (!File.Exists(metaFilePath)) return null;
+        if (Directory.Exists(filePath)) return null;
 
         using StreamReader reader = File.OpenText(metaFilePath);
 
@@ -30,38 +27,33 @@ internal static class PackageCreator
 
             string guid = line[5..].Trim();
 
+            if (string.IsNullOrWhiteSpace(guid)) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
+
             int assetsIndex = filePath.IndexOf("Assets", StringComparison.Ordinal);
 
             string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
 
-            return string.IsNullOrWhiteSpace(guid) ? null : new Asset(filePath, relativeFilePath, metaFilePath, guid);
+            return new Asset(filePath, relativeFilePath, metaFilePath, guid);
         }
 
-        return null;
+        throw new InvalidOperationException($"No GUID found in '{metaFilePath}'.");
     }
 
-    private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
+    private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IEnumerable<string> excludePatterns)
     {
         List<Asset> assets = [];
 
-        foreach (string path in Directory.EnumerateFileSystemEntries(sourceDirectoryPath, "*", FileSystemEnumerationOptions))
+        Matcher matcher = new();
+
+        matcher.AddInclude("**/*.meta");
+
+        matcher.AddExcludePatterns(excludePatterns);
+
+        foreach (string metaFilePath in matcher.GetResultsInFullPath(sourceDirectoryPath))
         {
-            if (ignoredPaths.Contains(path)) continue;
+            Asset? asset = await GetAssetAsync(metaFilePath);
 
-            if (Directory.Exists(path))
-            {
-                assets.AddRange(await GetAssetsAsync(path, ignoredPaths));
-            }
-            else if (File.Exists(path))
-            {
-                Asset? asset = await GetAssetAsync(path);
-
-                if (asset is not null) assets.Add(asset.Value);
-            }
-            else
-            {
-                throw new PathTypeDeductionException(path);
-            }
+            if (asset is not null) assets.Add(asset.Value);
         }
 
         return assets;
@@ -69,34 +61,34 @@ internal static class PackageCreator
 
     public static async Task CreatePackageFromDirectoryAsync(Options options)
     {
-        ImmutableHashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToImmutableHashSet();
-
-        List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, ignoredPaths);
-
-        if (assets.Count == 0)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-
-            await Console.Out.WriteLineAsync("No assets found. Exiting...");
-
-            Console.ResetColor();
-
-            return;
-        }
-
         string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         try
         {
+            List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, options.ExcludePatterns);
+
+            if (assets.Count == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+
+                await Console.Out.WriteLineAsync("No assets found. Exiting...");
+
+                Console.ResetColor();
+
+                return;
+            }
+
             foreach (Asset asset in assets)
             {
-                DirectoryInfo temporaryAssetDirectory = Directory.CreateDirectory(Path.Combine(temporaryDirectoryPath, asset.Guid));
+                string temporaryAssetDirectoryPath = Path.Combine(temporaryDirectoryPath, asset.Guid);
 
-                File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectory.FullName, "asset"));
+                Directory.CreateDirectory(temporaryAssetDirectoryPath);
 
-                File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectory.FullName, "asset.meta"));
+                File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectoryPath, "asset"));
 
-                await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectory.FullName, "pathname"), asset.RelativeFilePath);
+                File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectoryPath, "asset.meta"));
+
+                await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectoryPath, "pathname"), asset.RelativeFilePath);
             }
 
             if (File.Exists(options.OutputFilePath))
