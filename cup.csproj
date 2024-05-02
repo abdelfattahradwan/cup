@@ -6,12 +6,11 @@
         <Nullable>enable</Nullable>
         <AssemblyName>cup</AssemblyName>
         <RootNamespace>CreateUnityPackage</RootNamespace>
-        <DebugType>none</DebugType>
         <LangVersion>12</LangVersion>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="CommandLineParser" Version="2.9.1"/>
-        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="8.0.0"/>
     </ItemGroup>
 </Project>
 
