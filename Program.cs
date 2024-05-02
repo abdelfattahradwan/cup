@@ -37,8 +37,10 @@ internal static class Program
 				Console.ResetColor();
 
 				await Console.Out.WriteLineAsync("Do you want to continue? (y/n)");
+				
+				string? input = await Console.In.ReadLineAsync();
 
-				if (string.Equals(Console.ReadLine(), "y", StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(input, "y", StringComparison.OrdinalIgnoreCase))
 				{
 					Console.WriteLine("Continuing...");
 				}
