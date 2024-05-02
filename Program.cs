@@ -20,19 +20,23 @@ internal static class Program
 		{
 			try
 			{
-				if (JsonSerializer.Deserialize<IEnumerable<string>>(await File.ReadAllTextAsync(IgnoreFileName)) is { } extraIgnoredPaths) options.IgnoredPaths = options.IgnoredPaths.Concat(extraIgnoredPaths);
+				await using Stream stream = File.OpenRead(IgnoreFileName);
+
+				IEnumerable<string> excluded = await JsonSerializer.DeserializeAsync<IEnumerable<string>>(stream) ?? Enumerable.Empty<string>();
+				
+				options.IgnoredPaths = options.IgnoredPaths.Concat(excluded);
 			}
 			catch (Exception exception)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 
-				Console.WriteLine($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
+				await Console.Error.WriteLineAsync($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
 
-				Console.WriteLine(exception);
+				await Console.Error.WriteLineAsync(exception.ToString());
 
 				Console.ResetColor();
 
-				Console.WriteLine("Do you want to continue? (y/n)");
+				await Console.Out.WriteLineAsync("Do you want to continue? (y/n)");
 
 				if (string.Equals(Console.ReadLine(), "y", StringComparison.OrdinalIgnoreCase))
 				{
@@ -47,6 +51,6 @@ internal static class Program
 			}
 		}
 
-		await PackageCreator.CreatePackageFromDirectory(options);
+		await PackageCreator.CreatePackageFromDirectoryAsync(options);
 	}
 }
