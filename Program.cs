@@ -22,9 +22,9 @@ internal static class Program
 			{
 				await using Stream stream = File.OpenRead(IgnoreFileName);
 
-				IEnumerable<string> excluded = await JsonSerializer.DeserializeAsync<IEnumerable<string>>(stream) ?? Enumerable.Empty<string>();
+				IEnumerable<string> excludePatterns = await JsonSerializer.DeserializeAsync<IEnumerable<string>>(stream) ?? Enumerable.Empty<string>();
 				
-				options.IgnoredPaths = options.IgnoredPaths.Concat(excluded);
+				options.ExcludePatterns = options.ExcludePatterns.Concat(excludePatterns);
 			}
 			catch (Exception exception)
 			{
