@@ -42,11 +42,11 @@ internal static class Program
 
 				if (string.Equals(input, "y", StringComparison.OrdinalIgnoreCase))
 				{
-					Console.WriteLine("Continuing...");
+					await Console.Out.WriteLineAsync("Continuing...");
 				}
 				else
 				{
-					Console.WriteLine("Exiting...");
+					await Console.Out.WriteLineAsync("Exiting...");
 
 					return;
 				}
