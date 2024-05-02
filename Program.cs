@@ -1,58 +1,60 @@
 ﻿using CommandLine;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace CreateUnityPackage;
 
 internal static class Program
 {
-	private const string IgnoreFileName = ".cupignore";
+    private const string IgnoreFileName = ".cupignore";
 
-	public static async Task Main(string[] args)
-	{
-		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
-	}
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Options))]
+    public static async Task Main(string[] args)
+    {
+        await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
+    }
 
-	private static async Task HandleParsedAsync(Options options)
-	{
-		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
+    private static async Task HandleParsedAsync(Options options)
+    {
+        Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
 
-		if (File.Exists(IgnoreFileName))
-		{
-			try
-			{
-				await using Stream stream = File.OpenRead(IgnoreFileName);
+        if (File.Exists(IgnoreFileName))
+        {
+            try
+            {
+                await using Stream stream = File.OpenRead(IgnoreFileName);
 
-				IEnumerable<string> excludePatterns = await JsonSerializer.DeserializeAsync<IEnumerable<string>>(stream) ?? Enumerable.Empty<string>();
-				
-				options.ExcludePatterns = options.ExcludePatterns.Concat(excludePatterns);
-			}
-			catch (Exception exception)
-			{
-				Console.ForegroundColor = ConsoleColor.Red;
+                string[] excludePatterns = await JsonSerializer.DeserializeAsync(stream, ProgramJsonSerializerContext.Default.StringArray) ?? [];
 
-				await Console.Error.WriteLineAsync($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
+                options.ExcludePatterns = options.ExcludePatterns.Concat(excludePatterns);
+            }
+            catch (Exception exception)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
 
-				await Console.Error.WriteLineAsync(exception.ToString());
+                await Console.Error.WriteLineAsync($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
 
-				Console.ResetColor();
+                await Console.Error.WriteLineAsync(exception.ToString());
 
-				await Console.Out.WriteLineAsync("Do you want to continue? (y/n)");
-				
-				string? input = await Console.In.ReadLineAsync();
+                Console.ResetColor();
 
-				if (string.Equals(input, "y", StringComparison.OrdinalIgnoreCase))
-				{
-					await Console.Out.WriteLineAsync("Continuing...");
-				}
-				else
-				{
-					await Console.Out.WriteLineAsync("Exiting...");
+                await Console.Out.WriteLineAsync("Do you want to continue? (y/n)");
 
-					return;
-				}
-			}
-		}
+                string? input = await Console.In.ReadLineAsync();
 
-		await PackageCreator.CreatePackageFromDirectoryAsync(options);
-	}
+                if (string.Equals(input, "y", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Console.Out.WriteLineAsync("Continuing...");
+                }
+                else
+                {
+                    await Console.Out.WriteLineAsync("Exiting...");
+
+                    return;
+                }
+            }
+        }
+
+        await PackageCreator.CreatePackageFromDirectoryAsync(options);
+    }
 }
