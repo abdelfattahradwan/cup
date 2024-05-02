@@ -23,7 +23,7 @@ internal static partial class PackageCreator
 	[GeneratedRegex(@"Assets(\\|\/)(.*)", RegexOptions.Compiled)]
 	private static partial Regex GetGeneratedAssetsSubdirectoryRegex();
 
-	private static async ValueTask<Asset?> FindAsset(string filePath)
+	private static async Task<Asset?> FindAsset(string filePath)
 	{
 		string metaFilePath = $"{filePath}.meta";
 
@@ -43,7 +43,7 @@ internal static partial class PackageCreator
 		return null;
 	}
 
-	private static async ValueTask<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
+	private static async Task<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
 	{
 		ImmutableArray<Asset>.Builder assets = ImmutableArray.CreateBuilder<Asset>();
 
@@ -68,7 +68,7 @@ internal static partial class PackageCreator
 		return assets.ToImmutable();
 	}
 
-	public static async ValueTask CreatePackageFromDirectory(Options options)
+	public static async Task CreatePackageFromDirectory(Options options)
 	{
 		ImmutableHashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToImmutableHashSet();
 
