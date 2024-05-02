@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 
@@ -18,10 +17,10 @@ internal static partial class PackageCreator
 
 	private static readonly Regex AssetsSubdirectoryRegex = GetGeneratedAssetsSubdirectoryRegex();
 
-	[GeneratedRegex("guid:\\s*(?<guid>\\S+)", RegexOptions.Compiled)]
+	[GeneratedRegex(@"guid:\s*(?<guid>\S+)", RegexOptions.Compiled)]
 	private static partial Regex GetGeneratedMetaGuidRegex();
 
-	[GeneratedRegex("Assets(\\\\|\\/)(.*)", RegexOptions.Compiled)]
+	[GeneratedRegex(@"Assets(\\|\/)(.*)", RegexOptions.Compiled)]
 	private static partial Regex GetGeneratedAssetsSubdirectoryRegex();
 
 	private static async ValueTask<Asset?> FindAsset(string filePath)
