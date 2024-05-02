@@ -1,137 +1,136 @@
 ﻿using System.Collections.Immutable;
 using System.IO.Compression;
-using System.Text.RegularExpressions;
 
 namespace CreateUnityPackage;
 
-internal static partial class PackageCreator
+internal static class PackageCreator
 {
-	private static readonly EnumerationOptions FileSystemEnumerationOptions = new()
-	{
-		RecurseSubdirectories = false,
+    private static readonly EnumerationOptions FileSystemEnumerationOptions = new()
+    {
+        RecurseSubdirectories = false,
 
-		ReturnSpecialDirectories = false,
-	};
+        ReturnSpecialDirectories = false,
+    };
 
-	private static readonly Regex MetaGuidRegex = GetGeneratedMetaGuidRegex();
+    private static async Task<Asset?> GetAssetAsync(string filePath)
+    {
+        string metaFilePath = $"{filePath}.meta";
 
-	private static readonly Regex AssetsSubdirectoryRegex = GetGeneratedAssetsSubdirectoryRegex();
+        if (!File.Exists(metaFilePath)) return null;
 
-	[GeneratedRegex(@"guid:\s*(?<guid>\S+)", RegexOptions.Compiled)]
-	private static partial Regex GetGeneratedMetaGuidRegex();
+        using StreamReader reader = File.OpenText(metaFilePath);
 
-	[GeneratedRegex(@"Assets(\\|\/)(.*)", RegexOptions.Compiled)]
-	private static partial Regex GetGeneratedAssetsSubdirectoryRegex();
+        while (true)
+        {
+            string? line = await reader.ReadLineAsync();
 
-	private static async Task<Asset?> FindAsset(string filePath)
-	{
-		string metaFilePath = $"{filePath}.meta";
+            if (line is null) break;
 
-		if (!File.Exists(metaFilePath)) return null;
+            if (!line.StartsWith("guid:")) continue;
 
-		using StreamReader reader = File.OpenText(metaFilePath);
+            string guid = line[5..].Trim();
 
-		while (await reader.ReadLineAsync() is { } line && !string.IsNullOrWhiteSpace(line))
-		{
-			if (MetaGuidRegex.Match(line) is not { Success: true } match) continue;
+            int assetsIndex = filePath.IndexOf("Assets", StringComparison.Ordinal);
 
-			string guid = match.Groups["guid"].Value;
+            string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
 
-			return string.IsNullOrWhiteSpace(guid) ? null : new Asset(filePath, metaFilePath, guid);
-		}
+            return string.IsNullOrWhiteSpace(guid) ? null : new Asset(filePath, relativeFilePath, metaFilePath, guid);
+        }
 
-		return null;
-	}
+        return null;
+    }
 
-	private static async Task<ImmutableArray<Asset>> FindAssets(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
-	{
-		ImmutableArray<Asset>.Builder assets = ImmutableArray.CreateBuilder<Asset>();
+    private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IReadOnlySet<string> ignoredPaths)
+    {
+        List<Asset> assets = [];
 
-		foreach (string path in Directory.EnumerateFileSystemEntries(sourceDirectoryPath, "*", FileSystemEnumerationOptions))
-		{
-			if (ignoredPaths.Contains(path)) continue;
+        foreach (string path in Directory.EnumerateFileSystemEntries(sourceDirectoryPath, "*", FileSystemEnumerationOptions))
+        {
+            if (ignoredPaths.Contains(path)) continue;
 
-			if (Directory.Exists(path))
-			{
-				assets.AddRange(await FindAssets(path, ignoredPaths));
-			}
-			else if (File.Exists(path))
-			{
-				if (await FindAsset(path) is { } asset) assets.Add(asset);
-			}
-			else
-			{
-				throw new PathTypeDeductionException(path);
-			}
-		}
+            if (Directory.Exists(path))
+            {
+                assets.AddRange(await GetAssetsAsync(path, ignoredPaths));
+            }
+            else if (File.Exists(path))
+            {
+                Asset? asset = await GetAssetAsync(path);
 
-		return assets.ToImmutable();
-	}
+                if (asset is not null) assets.Add(asset.Value);
+            }
+            else
+            {
+                throw new PathTypeDeductionException(path);
+            }
+        }
 
-	public static async Task CreatePackageFromDirectory(Options options)
-	{
-		ImmutableHashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToImmutableHashSet();
+        return assets;
+    }
 
-		ImmutableArray<Asset> assets = await FindAssets(Environment.CurrentDirectory, ignoredPaths);
+    public static async Task CreatePackageFromDirectoryAsync(Options options)
+    {
+        ImmutableHashSet<string> ignoredPaths = options.IgnoredPaths.Select(Path.GetFullPath).ToImmutableHashSet();
 
-		if (assets.Length == 0)
-		{
-			Console.ForegroundColor = ConsoleColor.Red;
+        List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, ignoredPaths);
 
-			Console.WriteLine("No assets found. Exiting...");
+        if (assets.Count == 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
 
-			Console.ResetColor();
+            await Console.Out.WriteLineAsync("No assets found. Exiting...");
 
-			return;
-		}
+            Console.ResetColor();
 
-		string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), $"cup-{Guid.NewGuid():N}");
+            return;
+        }
 
-		try
-		{
-			foreach (Asset asset in assets)
-			{
-				DirectoryInfo assetDirectory = Directory.CreateDirectory(Path.Combine(temporaryDirectoryPath, asset.Guid));
+        string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-				File.Copy(asset.FilePath, Path.Combine(assetDirectory.FullName, "asset"));
+        try
+        {
+            foreach (Asset asset in assets)
+            {
+                DirectoryInfo temporaryAssetDirectory = Directory.CreateDirectory(Path.Combine(temporaryDirectoryPath, asset.Guid));
 
-				File.Copy(asset.MetaFilePath, Path.Combine(assetDirectory.FullName, "asset.meta"));
+                File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectory.FullName, "asset"));
 
-				await File.WriteAllTextAsync(Path.Combine(assetDirectory.FullName, "pathname"), AssetsSubdirectoryRegex.Match(asset.FilePath).Value);
-			}
+                File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectory.FullName, "asset.meta"));
 
-			if (File.Exists(options.OutputFilePath))
-			{
-				Console.ForegroundColor = ConsoleColor.Yellow;
+                await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectory.FullName, "pathname"), asset.RelativeFilePath);
+            }
 
-				Console.WriteLine($"Deleting existing file: '{options.OutputFilePath}'.");
+            if (File.Exists(options.OutputFilePath))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
 
-				Console.ResetColor();
+                await Console.Out.WriteLineAsync($"Deleting existing file: '{options.OutputFilePath}'.");
 
-				File.Delete(options.OutputFilePath);
-			}
+                Console.ResetColor();
 
-			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
+                File.Delete(options.OutputFilePath);
+            }
 
-			Console.ForegroundColor = ConsoleColor.Green;
+            ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
 
-			Console.WriteLine($"Package created: '{options.OutputFilePath}'.");
+            Console.ForegroundColor = ConsoleColor.Green;
 
-			Console.ResetColor();
-		}
-		catch (Exception exception)
-		{
-			Console.ForegroundColor = ConsoleColor.Red;
+            await Console.Out.WriteLineAsync($"Package created: '{options.OutputFilePath}'.");
 
-			Console.WriteLine("Failed to create package.");
+            Console.ResetColor();
+        }
+        catch (Exception exception)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
 
-			Console.WriteLine(exception.ToString());
+            await Console.Error.WriteLineAsync("Failed to create package.");
 
-			Console.ResetColor();
-		}
-		finally
-		{
-			if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
-		}
-	}
+            await Console.Error.WriteLineAsync(exception.ToString());
+
+            Console.ResetColor();
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
+        }
+    }
 }
