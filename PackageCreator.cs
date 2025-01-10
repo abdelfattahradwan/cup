@@ -5,124 +5,124 @@ namespace CreateUnityPackage;
 
 internal static class PackageCreator
 {
-    private static async Task<Asset?> GetAssetAsync(string metaFilePath)
-    {
-        string? metaFileDirectoryPath = Path.GetDirectoryName(metaFilePath);
+	private static async Task<Asset?> GetAssetAsync(string metaFilePath)
+	{
+		string? metaFileDirectoryPath = Path.GetDirectoryName(metaFilePath);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(metaFileDirectoryPath);
+		ArgumentException.ThrowIfNullOrWhiteSpace(metaFileDirectoryPath);
 
-        string filePath = Path.Combine(metaFileDirectoryPath, Path.GetFileNameWithoutExtension(metaFilePath));
+		string filePath = Path.Combine(metaFileDirectoryPath, Path.GetFileNameWithoutExtension(metaFilePath));
 
-        if (Directory.Exists(filePath)) return null;
+		if (Directory.Exists(filePath)) return null;
 
-        using StreamReader reader = File.OpenText(metaFilePath);
+		using StreamReader reader = File.OpenText(metaFilePath);
 
-        while (true)
-        {
-            string? line = await reader.ReadLineAsync();
+		while (true)
+		{
+			string? line = await reader.ReadLineAsync();
 
-            if (line is null) break;
+			if (line is null) break;
 
-            if (!line.StartsWith("guid:")) continue;
+			if (!line.StartsWith("guid:")) continue;
 
-            string guid = line[5..].Trim();
+			string guid = line[5..].Trim();
 
-            if (string.IsNullOrWhiteSpace(guid)) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
+			if (string.IsNullOrWhiteSpace(guid)) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
 
-            int assetsIndex = filePath.IndexOf("Assets", StringComparison.Ordinal);
+			int assetsIndex = filePath.IndexOf("Assets", StringComparison.Ordinal);
 
-            string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
+			string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
 
-            return new Asset(filePath, relativeFilePath, metaFilePath, guid);
-        }
+			return new Asset(filePath, relativeFilePath, metaFilePath, guid);
+		}
 
-        throw new InvalidOperationException($"No GUID found in '{metaFilePath}'.");
-    }
+		throw new InvalidOperationException($"No GUID found in '{metaFilePath}'.");
+	}
 
-    private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IEnumerable<string> excludePatterns)
-    {
-        List<Asset> assets = [];
+	private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IEnumerable<string> excludePatterns)
+	{
+		List<Asset> assets = [];
 
-        Matcher matcher = new();
+		Matcher matcher = new();
 
-        matcher.AddInclude("**/*.meta");
+		matcher.AddInclude("**/*.meta");
 
-        matcher.AddExcludePatterns(excludePatterns);
+		matcher.AddExcludePatterns(excludePatterns);
 
-        foreach (string metaFilePath in matcher.GetResultsInFullPath(sourceDirectoryPath))
-        {
-            Asset? asset = await GetAssetAsync(metaFilePath);
+		foreach (string metaFilePath in matcher.GetResultsInFullPath(sourceDirectoryPath))
+		{
+			Asset? asset = await GetAssetAsync(metaFilePath);
 
-            if (asset is not null) assets.Add(asset.Value);
-        }
+			if (asset is not null) assets.Add(asset.Value);
+		}
 
-        return assets;
-    }
+		return assets;
+	}
 
-    public static async Task CreatePackageFromDirectoryAsync(Options options)
-    {
-        string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+	public static async Task CreatePackageFromDirectoryAsync(Options options)
+	{
+		string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-        try
-        {
-            List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, options.ExcludePatterns);
+		try
+		{
+			List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, options.ExcludePatterns);
 
-            if (assets.Count == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.White;
+			if (assets.Count == 0)
+			{
+				Console.ForegroundColor = ConsoleColor.White;
 
-                await Console.Out.WriteLineAsync("No assets found. Exiting...");
+				await Console.Out.WriteLineAsync("No assets found. Exiting...");
 
-                Console.ResetColor();
+				Console.ResetColor();
 
-                return;
-            }
+				return;
+			}
 
-            foreach (Asset asset in assets)
-            {
-                string temporaryAssetDirectoryPath = Path.Combine(temporaryDirectoryPath, asset.Guid);
+			foreach (Asset asset in assets)
+			{
+				string temporaryAssetDirectoryPath = Path.Combine(temporaryDirectoryPath, asset.Guid);
 
-                Directory.CreateDirectory(temporaryAssetDirectoryPath);
+				Directory.CreateDirectory(temporaryAssetDirectoryPath);
 
-                File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectoryPath, "asset"));
+				File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectoryPath, "asset"));
 
-                File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectoryPath, "asset.meta"));
+				File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectoryPath, "asset.meta"));
 
-                await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectoryPath, "pathname"), asset.RelativeFilePath);
-            }
+				await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectoryPath, "pathname"), asset.RelativeFilePath);
+			}
 
-            if (File.Exists(options.OutputFilePath))
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
+			if (File.Exists(options.OutputFilePath))
+			{
+				Console.ForegroundColor = ConsoleColor.Yellow;
 
-                await Console.Out.WriteLineAsync($"Deleting existing file: '{options.OutputFilePath}'.");
+				await Console.Out.WriteLineAsync($"Deleting existing file: '{options.OutputFilePath}'.");
 
-                Console.ResetColor();
+				Console.ResetColor();
 
-                File.Delete(options.OutputFilePath);
-            }
+				File.Delete(options.OutputFilePath);
+			}
 
-            ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
+			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
 
-            Console.ForegroundColor = ConsoleColor.Green;
+			Console.ForegroundColor = ConsoleColor.Green;
 
-            await Console.Out.WriteLineAsync($"Package created: '{options.OutputFilePath}'.");
+			await Console.Out.WriteLineAsync($"Package created: '{options.OutputFilePath}'.");
 
-            Console.ResetColor();
-        }
-        catch (Exception exception)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
+			Console.ResetColor();
+		}
+		catch (Exception exception)
+		{
+			Console.ForegroundColor = ConsoleColor.Red;
 
-            await Console.Error.WriteLineAsync("Failed to create package.");
+			await Console.Error.WriteLineAsync("Failed to create package.");
 
-            await Console.Error.WriteLineAsync(exception.ToString());
+			await Console.Error.WriteLineAsync(exception.ToString());
 
-            Console.ResetColor();
-        }
-        finally
-        {
-            if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
-        }
-    }
+			Console.ResetColor();
+		}
+		finally
+		{
+			if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
+		}
+	}
 }
