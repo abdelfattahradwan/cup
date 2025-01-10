@@ -5,7 +5,7 @@ installing Unity.
 
 ## Features
 
-- Fast and lightweight packing process
+- Fast and efficient packing process
 - Create packages without installing Unity
 - Ignore files and folders automatically
 - Create packages with different compression levels
@@ -62,12 +62,12 @@ If the file contains anything else, an exception is thrown.
 
 ## Downloads
 
-There are two different binaries available to download:
+Two different binaries are available for download:
 
-- A self-contained binary that ***does not*** require .NET to be installed
-- A framework-dependent binary that ***requires .NET*** to be installed
+- A self-contained binary that ***does not*** require .NET to be installed.
+- A framework-dependent binary that ***requires .NET*** to be installed.
 
-NOTE: The framework-dependent binary requires at least ***.NET 8*** to be installed.
+NOTE: The framework-dependent binary requires at least ***.NET 9*** to be installed.
 
 ## Help the Project
 
