@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.FileSystemGlobbing;
 using System.IO.Compression;
+using System.Text;
 
 namespace CreateUnityPackage;
 
@@ -61,8 +62,6 @@ internal static class PackageCreator
 
 	public static async Task CreatePackageFromDirectoryAsync(Options options)
 	{
-		string temporaryDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-
 		try
 		{
 			List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, options.ExcludePatterns);
@@ -78,19 +77,6 @@ internal static class PackageCreator
 				return;
 			}
 
-			foreach (Asset asset in assets)
-			{
-				string temporaryAssetDirectoryPath = Path.Combine(temporaryDirectoryPath, asset.Guid);
-
-				Directory.CreateDirectory(temporaryAssetDirectoryPath);
-
-				File.Copy(asset.FilePath, Path.Combine(temporaryAssetDirectoryPath, "asset"));
-
-				File.Copy(asset.MetaFilePath, Path.Combine(temporaryAssetDirectoryPath, "asset.meta"));
-
-				await File.WriteAllTextAsync(Path.Combine(temporaryAssetDirectoryPath, "pathname"), asset.RelativeFilePath);
-			}
-
 			if (File.Exists(options.OutputFilePath))
 			{
 				Console.ForegroundColor = ConsoleColor.Yellow;
@@ -102,7 +88,25 @@ internal static class PackageCreator
 				File.Delete(options.OutputFilePath);
 			}
 
-			ZipFile.CreateFromDirectory(temporaryDirectoryPath, options.OutputFilePath, (CompressionLevel)options.Compression, false);
+			CompressionLevel compressionLevel = (CompressionLevel)options.Compression;
+
+			using (ZipArchive zipArchive = ZipFile.Open(options.OutputFilePath, ZipArchiveMode.Create))
+			{
+				foreach (Asset asset in assets)
+				{
+					zipArchive.CreateEntryFromFile(asset.FilePath, $"{asset.Guid}/asset", compressionLevel);
+
+					zipArchive.CreateEntryFromFile(asset.MetaFilePath, $"{asset.Guid}/asset.meta", compressionLevel);
+
+					ZipArchiveEntry pathnameEntry = zipArchive.CreateEntry($"{asset.Guid}/pathname", compressionLevel);
+
+					await using Stream pathnameEntryStream = pathnameEntry.Open();
+
+					byte[] relativeFilePathBytes = Encoding.UTF8.GetBytes(asset.RelativeFilePath);
+
+					await pathnameEntryStream.WriteAsync(relativeFilePathBytes);
+				}
+			}
 
 			Console.ForegroundColor = ConsoleColor.Green;
 
@@ -119,10 +123,6 @@ internal static class PackageCreator
 			await Console.Error.WriteLineAsync(exception.ToString());
 
 			Console.ResetColor();
-		}
-		finally
-		{
-			if (Directory.Exists(temporaryDirectoryPath)) Directory.Delete(temporaryDirectoryPath, true);
 		}
 	}
 }
