@@ -24,7 +24,7 @@ internal static class PackageCreator
 
 			if (line is null) break;
 
-			if (!line.StartsWith("guid:")) continue;
+			if (!line.StartsWith("guid:", StringComparison.OrdinalIgnoreCase)) continue;
 
 			string guid = line[5..].Trim();
 
