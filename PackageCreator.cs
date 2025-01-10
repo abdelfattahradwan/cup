@@ -29,7 +29,7 @@ internal static class PackageCreator
 
 			if (string.IsNullOrWhiteSpace(guid)) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
 
-			int assetsIndex = filePath.IndexOf("Assets", StringComparison.Ordinal);
+			int assetsIndex = filePath.IndexOf("Assets", StringComparison.OrdinalIgnoreCase);
 
 			string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
 
