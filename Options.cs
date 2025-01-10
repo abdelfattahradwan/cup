@@ -14,5 +14,5 @@ internal sealed class Options
     public byte Compression { get; set; } = 0;
 
     [Option('e', "exclude", Required = false, HelpText = "List of file/directory glob patterns to exclude.")]
-    public IEnumerable<string> ExcludePatterns { get; set; } = Enumerable.Empty<string>();
+    public IEnumerable<string> ExcludePatterns { get; set; } = [];
 }
