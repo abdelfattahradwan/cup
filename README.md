@@ -67,7 +67,7 @@ There are two different flavours of binaries available to download, slim and sta
 - A slim binary ***requires .NET*** to be installed. 
 - A standalone binary ***does not*** require .NET to be installed.
 
-NOTE: slim binary requires at least ***.NET 9*** to be installed.
+NOTE: slim binaries require at least ***.NET 9*** to be installed.
 
 ## Help the Project
 
