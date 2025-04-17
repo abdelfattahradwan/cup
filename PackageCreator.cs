@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.FileSystemGlobbing;
+using System.Buffers;
 using System.IO.Compression;
 using System.Text;
 
@@ -6,7 +7,7 @@ namespace CreateUnityPackage;
 
 internal static class PackageCreator
 {
-	private static async Task<Asset?> GetAssetAsync(string metaFilePath)
+	private static Asset? GetAsset(string metaFilePath)
 	{
 		string? metaFileDirectoryPath = Path.GetDirectoryName(metaFilePath);
 
@@ -20,27 +21,27 @@ internal static class PackageCreator
 
 		while (true)
 		{
-			string? line = await reader.ReadLineAsync();
+			string? line = reader.ReadLine();
 
 			if (line is null) break;
 
 			if (!line.StartsWith("guid:", StringComparison.OrdinalIgnoreCase)) continue;
 
-			string guid = line[5..].Trim();
+			ReadOnlySpan<char> guid = line.AsSpan(5).Trim();
 
-			if (string.IsNullOrWhiteSpace(guid)) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
+			if (guid.IsEmpty) throw new InvalidOperationException($"The GUID in '{metaFilePath}' is empty or whitespace.");
 
 			int assetsIndex = filePath.IndexOf("Assets", StringComparison.OrdinalIgnoreCase);
 
 			string relativeFilePath = filePath[assetsIndex..].Replace('\\', '/');
 
-			return new Asset(filePath, relativeFilePath, metaFilePath, guid);
+			return new Asset(filePath, relativeFilePath, metaFilePath, new string(guid));
 		}
 
 		throw new InvalidOperationException($"No GUID found in '{metaFilePath}'.");
 	}
 
-	private static async Task<List<Asset>> GetAssetsAsync(string sourceDirectoryPath, IEnumerable<string> excludePatterns)
+	private static List<Asset> GetAssets(string sourceDirectoryPath, IEnumerable<string> excludePatterns)
 	{
 		List<Asset> assets = [];
 
@@ -52,7 +53,7 @@ internal static class PackageCreator
 
 		foreach (string metaFilePath in matcher.GetResultsInFullPath(sourceDirectoryPath))
 		{
-			Asset? asset = await GetAssetAsync(metaFilePath);
+			Asset? asset = GetAsset(metaFilePath);
 
 			if (asset is not null) assets.Add(asset.Value);
 		}
@@ -60,17 +61,17 @@ internal static class PackageCreator
 		return assets;
 	}
 
-	public static async Task CreatePackageFromDirectoryAsync(Options options)
+	public static void CreatePackageFromDirectory(Options options)
 	{
 		try
 		{
-			List<Asset> assets = await GetAssetsAsync(Environment.CurrentDirectory, options.ExcludePatterns);
+			List<Asset> assets = GetAssets(Environment.CurrentDirectory, options.ExcludePatterns);
 
 			if (assets.Count == 0)
 			{
 				Console.ForegroundColor = ConsoleColor.White;
 
-				await Console.Out.WriteLineAsync("No assets found. Exiting...");
+				Console.Out.WriteLine("No assets found. Exiting...");
 
 				Console.ResetColor();
 
@@ -81,7 +82,7 @@ internal static class PackageCreator
 			{
 				Console.ForegroundColor = ConsoleColor.Yellow;
 
-				await Console.Out.WriteLineAsync($"Deleting existing file: '{options.OutputFilePath}'.");
+				Console.Out.WriteLine($"Deleting existing file: '{options.OutputFilePath}'.");
 
 				Console.ResetColor();
 
@@ -100,17 +101,26 @@ internal static class PackageCreator
 
 					ZipArchiveEntry pathnameEntry = zipArchive.CreateEntry($"{asset.Guid}/pathname", compressionLevel);
 
-					await using Stream pathnameEntryStream = pathnameEntry.Open();
+					using Stream pathnameEntryStream = pathnameEntry.Open();
 
-					byte[] relativeFilePathBytes = Encoding.UTF8.GetBytes(asset.RelativeFilePath);
+					byte[] relativeFilePathBytes = ArrayPool<byte>.Shared.Rent(512);
 
-					await pathnameEntryStream.WriteAsync(relativeFilePathBytes);
+					try
+					{
+						int length = Encoding.UTF8.GetBytes(asset.RelativeFilePath, relativeFilePathBytes);
+
+						pathnameEntryStream.Write(relativeFilePathBytes, 0, length);
+					}
+					finally
+					{
+						ArrayPool<byte>.Shared.Return(relativeFilePathBytes);
+					}
 				}
 			}
 
 			Console.ForegroundColor = ConsoleColor.Green;
 
-			await Console.Out.WriteLineAsync($"Package created: '{options.OutputFilePath}'.");
+			Console.Out.WriteLine($"Package created: '{options.OutputFilePath}'.");
 
 			Console.ResetColor();
 		}
@@ -118,9 +128,9 @@ internal static class PackageCreator
 		{
 			Console.ForegroundColor = ConsoleColor.Red;
 
-			await Console.Error.WriteLineAsync("Failed to create package.");
+			Console.Error.WriteLine("Failed to create package.");
 
-			await Console.Error.WriteLineAsync(exception.ToString());
+			Console.Error.WriteLine(exception.ToString());
 
 			Console.ResetColor();
 		}
