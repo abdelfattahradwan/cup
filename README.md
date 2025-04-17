@@ -62,12 +62,12 @@ If the file contains anything else, an exception is thrown.
 
 ## Downloads
 
-Two different binaries are available for download:
+There are two different flavours of binaries available to download, slim and standalone:
 
-- A self-contained binary that ***does not*** require .NET to be installed.
-- A framework-dependent binary that ***requires .NET*** to be installed.
+- A slim binary ***requires .NET*** to be installed. 
+- A standalone binary ***does not*** require .NET to be installed.
 
-NOTE: The framework-dependent binary requires at least ***.NET 9*** to be installed.
+NOTE: slim binary requires at least ***.NET 9*** to be installed.
 
 ## Help the Project
 
