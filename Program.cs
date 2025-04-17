@@ -9,12 +9,12 @@ internal static class Program
 	private const string IgnoreFileName = ".cupignore";
 
 	[DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Options))]
-	public static async Task Main(string[] args)
+	public static void Main(string[] args)
 	{
-		await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(HandleParsedAsync);
+		Parser.Default.ParseArguments<Options>(args).WithParsed(HandleParsed);
 	}
 
-	private static async Task HandleParsedAsync(Options options)
+	private static void HandleParsed(Options options)
 	{
 		Environment.CurrentDirectory = Path.GetFullPath(options.SourceDirectoryPath);
 
@@ -22,9 +22,9 @@ internal static class Program
 		{
 			try
 			{
-				await using Stream stream = File.OpenRead(IgnoreFileName);
+				using Stream stream = File.OpenRead(IgnoreFileName);
 
-				string[] excludePatterns = await JsonSerializer.DeserializeAsync(stream, ProgramJsonSerializerContext.Default.StringArray) ?? [];
+				string[] excludePatterns = JsonSerializer.Deserialize(stream, ProgramJsonSerializerContext.Default.StringArray) ?? [];
 
 				options.ExcludePatterns = options.ExcludePatterns.Concat(excludePatterns);
 			}
@@ -32,29 +32,29 @@ internal static class Program
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 
-				await Console.Error.WriteLineAsync($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
+				Console.Error.WriteLine($"Failed to load the .cupignore file at '{Path.GetFullPath(IgnoreFileName)}'.");
 
-				await Console.Error.WriteLineAsync(exception.ToString());
+				Console.Error.WriteLine(exception.ToString());
 
 				Console.ResetColor();
 
-				await Console.Out.WriteLineAsync("Do you want to continue? (y/n)");
+				Console.Out.WriteLine("Do you want to continue? (y/n)");
 
-				string? input = await Console.In.ReadLineAsync();
+				string? input = Console.In.ReadLine();
 
 				if (string.Equals(input, "y", StringComparison.OrdinalIgnoreCase))
 				{
-					await Console.Out.WriteLineAsync("Continuing...");
+					Console.Out.WriteLine("Continuing...");
 				}
 				else
 				{
-					await Console.Out.WriteLineAsync("Exiting...");
+					Console.Out.WriteLine("Exiting...");
 
 					return;
 				}
 			}
 		}
 
-		await PackageCreator.CreatePackageFromDirectoryAsync(options);
+		PackageCreator.CreatePackageFromDirectory(options);
 	}
 }
