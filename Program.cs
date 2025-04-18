@@ -1,6 +1,5 @@
 ﻿using CommandLine;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace CreateUnityPackage;
 
