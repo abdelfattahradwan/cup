@@ -69,7 +69,7 @@ internal static class PackageCreator
 
 			List<Asset> assets = GetAssets(Environment.CurrentDirectory, options.ExcludePatterns);
 
-			Console.Out.WriteLine($"Found ${assets.Count} asset(s).");
+			Console.Out.WriteLine($"Found {assets.Count} asset(s).");
 
 			if (assets.Count == 0)
 			{
