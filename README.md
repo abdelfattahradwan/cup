@@ -62,12 +62,13 @@ If the file cannot be read, you will be prompted to decide whether to continue w
 
 ## Downloads
 
-There are two different flavours of binaries available to download, slim and standalone:
+There are three different flavours of binaries available to download, slim, standalone, and native:
 
 - A slim binary ***requires .NET*** to be installed.
 - A standalone binary ***does not*** require .NET to be installed.
+- A native binary ***does not*** require .NET to be installed.
 
-NOTE: slim binaries require at least ***.NET 9*** to be installed.
+NOTE: slim binaries require ***.NET 9*** to be installed.
 
 ## Help the Project
 
