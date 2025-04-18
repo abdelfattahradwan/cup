@@ -45,26 +45,26 @@ installing Unity.
 
 ## Ignoring Files/Folders
 
-You can ignore certain files/folders by creating a `.cupignore` file at the *root directory path* that you specify.
-The `.cupignore` must contain only a single `JSON` array with glob patterns to ignore.
+You can ignore certain files/folders by creating a `.cupignore` file at the _root directory path_ that you specify. The
+`.cupignore` file should contain glob patterns to ignore, with one pattern per line:
 
-```json
-[
-  "**/Editor/*",
-  "**/Tests/*",
-  "**/Examples/*",
-  "**/*.tmp",
-  "Assets/Scripts/Debug/**/*"
-]
+```plaintext
+**/Editor/*
+**/Tests/*
+**/Examples/*
+**/*.tmp
+Assets/Scripts/Debug/**/*
 ```
 
-If the file contains anything else, an exception is thrown.
+These patterns will be added to any patterns specified with the `-e, --exclude` command-line argument.
+
+If the file cannot be read, you will be prompted to decide whether to continue without the ignore patterns.
 
 ## Downloads
 
 There are two different flavours of binaries available to download, slim and standalone:
 
-- A slim binary ***requires .NET*** to be installed. 
+- A slim binary ***requires .NET*** to be installed.
 - A standalone binary ***does not*** require .NET to be installed.
 
 NOTE: slim binaries require at least ***.NET 9*** to be installed.
