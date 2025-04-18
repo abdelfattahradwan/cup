@@ -22,9 +22,7 @@ internal static class Program
 		{
 			try
 			{
-				using Stream stream = File.OpenRead(IgnoreFileName);
-
-				string[] excludePatterns = JsonSerializer.Deserialize(stream, ProgramJsonSerializerContext.Default.StringArray) ?? [];
+				string[] excludePatterns = File.ReadAllLines(IgnoreFileName);
 
 				options.ExcludePatterns = options.ExcludePatterns.Concat(excludePatterns);
 			}
