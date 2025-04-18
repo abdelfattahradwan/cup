@@ -1,0 +1,115 @@
+version: '3'
+
+vars:
+  OUTPUT_DIRECTORY: bin/Publish
+  PROJECT: cup.csproj
+
+tasks:
+  publish:
+    vars:
+      OS: '{{.OS | default "win"}}'
+      ARCH: '{{.ARCH | default "x64"}}'
+      MODE: '{{.MODE | default "slim"}}'
+      PUBLISH_AOT:
+        sh: if [ "{{.MODE}}" = "native" ]; then echo "true"; else echo "false"; fi
+      PUBLISH_TRIMMED:
+        sh: if [ "{{.MODE}}" = "slim" ]; then echo "false"; else echo "true"; fi
+      SELF_CONTAINED:
+        sh: if [ "{{.MODE}}" = "slim" ]; then echo "false"; else echo "true"; fi
+    cmds:
+      - dotnet publish "{{.PROJECT}}" -c Release -r {{.OS}}-{{.ARCH}} -p:PublishAot={{.PUBLISH_AOT}} -p:PublishSingleFile=true -p:PublishTrimmed={{.PUBLISH_TRIMMED}} --self-contained {{.SELF_CONTAINED}} -o {{.OUTPUT_DIRECTORY}}/{{.OS}}-{{.ARCH}}-{{.MODE}}
+
+  publish-win-x86-slim:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x86
+          MODE: slim
+
+  publish-win-x86-standalone:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x86
+          MODE: standalone
+
+  publish-win-x86-native:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x86
+          MODE: native
+
+  publish-win-x86:
+    cmds:
+      - task: publish-win-x86-slim
+      - task: publish-win-x86-standalone
+      - task: publish-win-x86-native
+
+  publish-win-x64-slim:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x64
+          MODE: slim
+
+  publish-win-x64-standalone:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x64
+          MODE: standalone
+
+  publish-win-x64-native:
+    cmds:
+      - task: publish
+        vars:
+          OS: win
+          ARCH: x64
+          MODE: native
+
+  publish-win-x64:
+    cmds:
+      - task: publish-win-x64-slim
+      - task: publish-win-x64-standalone
+      - task: publish-win-x64-native
+
+  publish-win:
+    cmds:
+      - task: publish-win-x86
+      - task: publish-win-x64
+
+  publish-linux-x64-slim:
+    cmds:
+      - task: publish
+        vars:
+          OS: linux
+          ARCH: x64
+          MODE: slim
+
+  publish-linux-x64-standalone:
+    cmds:
+      - task: publish
+        vars:
+          OS: linux
+          ARCH: x64
+          MODE: standalone
+
+  publish-linux-x64-native:
+    cmds:
+      - task: publish
+        vars:
+          OS: linux
+          ARCH: x64
+          MODE: native
+
+  publish-linux-x64:
+    cmds:
+      - task: publish-linux-x64-slim
+      - task: publish-linux-x64-standalone
+      - task: publish-linux-x64-native
