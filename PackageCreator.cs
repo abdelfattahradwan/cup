@@ -65,15 +65,15 @@ internal static class PackageCreator
 	{
 		try
 		{
+			Console.Out.WriteLine("Scanning for assets...");
+
 			List<Asset> assets = GetAssets(Environment.CurrentDirectory, options.ExcludePatterns);
+
+			Console.Out.WriteLine($"Found ${assets} asset(s).");
 
 			if (assets.Count == 0)
 			{
-				Console.ForegroundColor = ConsoleColor.White;
-
 				Console.Out.WriteLine("No assets found. Exiting...");
-
-				Console.ResetColor();
 
 				return;
 			}
